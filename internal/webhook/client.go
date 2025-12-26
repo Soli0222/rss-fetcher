@@ -30,19 +30,37 @@ func NewClient() *Client {
 	}
 }
 
-// Post sends the payload to a specific webhook URL.
-func (c *Client) Post(ctx context.Context, url string, payload Payload) error {
-	body, err := json.Marshal(payload)
+// DiscordPayload represents the structure for Discord Webhooks
+type DiscordPayload struct {
+	Content string `json:"content"`
+	// We could add embeds for fancier display, but content is safest for now.
+}
+
+func (c *Client) SendWithRateLimit(ctx context.Context, wh config.Webhook, payload Payload) error {
+	var body []byte
+	var err error
+
+	if wh.Provider == "discord" {
+		// Format for Discord
+		dp := DiscordPayload{
+			Content: fmt.Sprintf("**%s**\n%s\n%s", payload.FeedTitle, payload.ItemTitle, payload.ItemURL),
+		}
+		body, err = json.Marshal(dp)
+	} else {
+		// Generic JSON
+		body, err = json.Marshal(payload)
+	}
+
 	if err != nil {
 		return fmt.Errorf("failed to marshal payload: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewBuffer(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, wh.URL, bytes.NewBuffer(body))
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("User-Agent", "rss-fetcher/1.1")
+	req.Header.Set("User-Agent", "rss-fetcher/1.2")
 
 	resp, err := c.client.Do(req)
 	if err != nil {
@@ -54,35 +72,7 @@ func (c *Client) Post(ctx context.Context, url string, payload Payload) error {
 		return fmt.Errorf("webhook responded with status: %d", resp.StatusCode)
 	}
 
-	return nil
-}
-
-// Manager handles distributing posts to multiple webhooks with rate limiting.
-type Manager struct {
-	client   *Client
-	webhooks []config.Webhook
-	queues   map[string]chan Payload
-}
-
-// Actually, simplistic approach: The Fetcher calls "Broadcast" or "Notify" and this manager handles the loop?
-// Or: Fetcher calls Post, and Post iterates?
-// If we want Rate Limit, we need sequential processing per webhook.
-
-// Let's implement a Broadcast method that takes payload, and for each webhook, sends it.
-// To handle rate limit, simple `time.Sleep` after post is blocking if we do it inline.
-// But we want to block the fetcher loop? "webhookにpostするとき、レートリミットに引っかかる可能性があります。postするときのインターバルを設定できるようにしたいです"
-// This implies we should slow down posting.
-// If we have 10 items, and interval is 1s, it takes 10s to process that feed. That is acceptable.
-
-func (c *Client) SendWithRateLimit(ctx context.Context, wh config.Webhook, payload Payload) error {
-	// Just post. Rate limit is handled by caller (Fetcher) or we wrap it here?
-	// User asked "postするときのインターバルを設定できるようにしたいです" (I want to be able to set the interval when posting).
-	// If we just sleep AFTER post, that satisfies it.
-
-	if err := c.Post(ctx, wh.URL, payload); err != nil {
-		return err
-	}
-
+	// Rate Limit Wait
 	if wh.PostInterval > 0 {
 		select {
 		case <-ctx.Done():
@@ -90,5 +80,6 @@ func (c *Client) SendWithRateLimit(ctx context.Context, wh config.Webhook, paylo
 		case <-time.After(wh.PostInterval):
 		}
 	}
+
 	return nil
 }

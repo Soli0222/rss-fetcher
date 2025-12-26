@@ -55,6 +55,13 @@ webhooks:
     url: "https://your-webhook-url.com/entrypoint"
     # POSTリクエスト間の待機時間（レートリミット対策）
     post_interval: 2s
+    # ペイロード形式を指定: 'generic' (デフォルト) または 'discord'
+    provider: generic
+
+  - name: "discord-channel"
+    url: "https://discord.com/api/webhooks/..."
+    provider: discord
+    post_interval: 2s
 ```
 
 ## 開発・ビルド

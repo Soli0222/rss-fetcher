@@ -27,6 +27,7 @@ type WebhooksConfig struct {
 type Webhook struct {
 	Name         string        `yaml:"name"`
 	URL          string        `yaml:"url"`
+	Provider     string        `yaml:"provider"` // "generic" (default) or "discord"
 	PostInterval time.Duration `yaml:"post_interval"`
 }
 
@@ -62,6 +63,13 @@ func Load(feedsPath, webhooksPath string) (*AppConfig, error) {
 	}
 	if len(c.Webhooks.Webhooks) == 0 {
 		return nil, fmt.Errorf("no webhooks configured")
+	}
+
+	// Set default provider
+	for i := range c.Webhooks.Webhooks {
+		if c.Webhooks.Webhooks[i].Provider == "" {
+			c.Webhooks.Webhooks[i].Provider = "generic"
+		}
 	}
 
 	return c, nil

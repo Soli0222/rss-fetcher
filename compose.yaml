@@ -9,7 +9,7 @@ services:
     restart: always
 
   valkey:
-    image: valkey/valkey:8.0
+    image: valkey/valkey:8.1
     restart: always
     ports:
       - "6379:6379"

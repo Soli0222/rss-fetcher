@@ -29,8 +29,8 @@ jobs:
       - name: Prepare
         run: |
           platform=${{ matrix.platform }}
-          echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV
-          echo "REGISTRY_IMAGE=${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
+          echo "PLATFORM_PAIR=${platform//\//-}" >> "$GITHUB_ENV"
+          echo "REGISTRY_IMAGE=${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
 
       - name: Check out the repo
         uses: actions/checkout@v6.0.1
@@ -87,7 +87,7 @@ jobs:
       - build
     steps:
       - name: Prepare
-        run: echo "REGISTRY_IMAGE=${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
+        run: echo "REGISTRY_IMAGE=${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
 
       - name: Download digests
         uses: actions/download-artifact@v7
@@ -116,6 +116,7 @@ jobs:
       - name: Create manifest list and push
         working-directory: /tmp/digests
         run: |
+          # shellcheck disable=SC2046
           docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
             $(printf '${{ env.REGISTRY }}/${{ env.REGISTRY_IMAGE }}@sha256:%s ' *)
 

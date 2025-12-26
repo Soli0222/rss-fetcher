@@ -1,0 +1,4 @@
+webhooks:
+  - name: "httpbin-test"
+    url: "https://httpbin.org/post"
+    post_interval: 2s

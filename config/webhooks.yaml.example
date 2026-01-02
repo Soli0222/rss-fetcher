@@ -1,0 +1,14 @@
+webhooks:
+  - name: "httpbin-test"
+    url: "https://httpbin.org/post"
+    post_interval: 2s
+    provider: generic
+  - name: "discord-test"
+    url: "https://discord.com/api/webhooks/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    post_interval: 2s
+    provider: discord
+  - name: "misskey-test"
+    url: "https://misskey.io"  # Your Misskey instance URL (without /api/notes/create)
+    post_interval: 2s
+    provider: misskey
+    api_token: "your-api-token-here"  # Required: Get from Settings > API

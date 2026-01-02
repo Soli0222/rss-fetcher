@@ -1,0 +1,9 @@
+feeds:
+  - https://www.youtube.com/feeds/videos.xml?channel_id=UCRcLAVTbmx2-iNcXSsupdNA
+interval: 10s
+store:
+  # If you want to on-memory storage, set type to 'memory'
+  # type: 'memory'
+  # If you want to use Redis, set type to 'valkey'
+  type: 'valkey'
+  address: valkey:6379

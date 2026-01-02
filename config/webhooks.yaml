@@ -1,9 +1,0 @@
-webhooks:
-  - name: "httpbin-test"
-    url: "https://httpbin.org/post"
-    post_interval: 2s
-    provider: generic
-  - name: "discord-test"
-    url: "https://discord.com/api/webhooks/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-    post_interval: 2s
-    provider: discord

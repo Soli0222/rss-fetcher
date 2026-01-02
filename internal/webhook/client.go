@@ -36,17 +36,36 @@ type DiscordPayload struct {
 	// We could add embeds for fancier display, but content is safest for now.
 }
 
+// MisskeyPayload represents the structure for Misskey note creation
+type MisskeyPayload struct {
+	I          string `json:"i"`                    // API token
+	Text       string `json:"text"`                 // Note content
+	Visibility string `json:"visibility,omitempty"` // public, home, followers, specified
+}
+
 func (c *Client) SendWithRateLimit(ctx context.Context, wh config.Webhook, payload Payload) error {
 	var body []byte
 	var err error
+	var url string = wh.URL
 
-	if wh.Provider == "discord" {
+	switch wh.Provider {
+	case "discord":
 		// Format for Discord
 		dp := DiscordPayload{
 			Content: fmt.Sprintf("**%s**\n%s\n%s", payload.FeedTitle, payload.ItemTitle, payload.ItemURL),
 		}
 		body, err = json.Marshal(dp)
-	} else {
+	case "misskey":
+		// Format for Misskey - post as a note
+		mp := MisskeyPayload{
+			I:          wh.APIToken,
+			Text:       fmt.Sprintf("%s\n%s\n%s", payload.FeedTitle, payload.ItemTitle, payload.ItemURL),
+			Visibility: "public",
+		}
+		body, err = json.Marshal(mp)
+		// Misskey API endpoint for creating notes
+		url = wh.URL + "/api/notes/create"
+	default:
 		// Generic JSON
 		body, err = json.Marshal(payload)
 	}
@@ -55,7 +74,7 @@ func (c *Client) SendWithRateLimit(ctx context.Context, wh config.Webhook, paylo
 		return fmt.Errorf("failed to marshal payload: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, wh.URL, bytes.NewBuffer(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewBuffer(body))
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
 	}

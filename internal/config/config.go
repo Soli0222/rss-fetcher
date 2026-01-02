@@ -27,8 +27,9 @@ type WebhooksConfig struct {
 type Webhook struct {
 	Name         string        `yaml:"name"`
 	URL          string        `yaml:"url"`
-	Provider     string        `yaml:"provider"` // "generic" (default) or "discord"
+	Provider     string        `yaml:"provider"` // "generic" (default), "discord", or "misskey"
 	PostInterval time.Duration `yaml:"post_interval"`
+	APIToken     string        `yaml:"api_token"` // Required for misskey
 }
 
 type AppConfig struct {

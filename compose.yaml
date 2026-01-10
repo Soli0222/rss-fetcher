@@ -6,15 +6,20 @@ services:
       - ./config/webhooks.yaml:/app/config/webhooks.yaml
     depends_on:
       - valkey
+    networks:
+      - internal
     restart: always
 
   valkey:
     image: valkey/valkey:9.0.1-alpine3.23
     restart: always
-    ports:
-      - "6379:6379"
+    networks:
+      - internal
     volumes:
       - valkey-data:/data
 
 volumes:
   valkey-data:
+
+networks:
+  internal:

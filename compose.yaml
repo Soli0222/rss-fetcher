@@ -11,7 +11,7 @@ services:
     restart: always
 
   valkey:
-    image: valkey/valkey:9.0.1-alpine3.23
+    image: valkey/valkey:9.0.2-alpine3.23
     restart: always
     networks:
       - internal

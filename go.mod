@@ -1,6 +1,6 @@
 module rss-fetcher
 
-go 1.25.5
+go 1.26.0
 
 require (
 	github.com/mmcdole/gofeed v1.3.0

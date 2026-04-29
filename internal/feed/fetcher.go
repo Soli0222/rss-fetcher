@@ -51,17 +51,19 @@ func NewFetcher(store state.Store, whClient *webhook.Client, webhooks []config.W
 	}
 }
 
-func (f *Fetcher) ProcessFeed(ctx context.Context, feedURL string) {
-	logger := slog.With("feed", feedURL)
+func (f *Fetcher) ProcessFeed(ctx context.Context, feedConfig config.Feed) {
+	feedURL := feedConfig.URL
+	feedLabel := feedConfig.Label()
+	logger := slog.With("feed", feedLabel, "feed_url", feedURL)
 	logger.Info("Checking feed")
 
 	feed, err := f.parser.ParseURLWithContext(feedURL, ctx)
 	if err != nil {
 		logger.Error("Failed to parse feed", "error", err)
-		metricFetchCount.WithLabelValues(feedURL, "error").Inc()
+		metricFetchCount.WithLabelValues(feedLabel, "error").Inc()
 		return
 	}
-	metricFetchCount.WithLabelValues(feedURL, "success").Inc()
+	metricFetchCount.WithLabelValues(feedLabel, "success").Inc()
 
 	feedState, stateErr := f.store.GetFeedState(feedURL)
 	if stateErr != nil && !errors.Is(stateErr, state.ErrNoState) {
@@ -124,7 +126,7 @@ func (f *Fetcher) ProcessFeed(ctx context.Context, feedURL string) {
 
 	for _, item := range newItems {
 		payload := webhook.Payload{
-			FeedTitle:   feed.Title,
+			FeedTitle:   feedTitle(feedConfig, feed.Title),
 			ItemTitle:   item.Title,
 			ItemURL:     item.Link,
 			PublishedAt: *item.PublishedParsed,
@@ -136,7 +138,7 @@ func (f *Fetcher) ProcessFeed(ctx context.Context, feedURL string) {
 			}
 		}
 
-		metricNewItems.WithLabelValues(feedURL).Inc()
+		metricNewItems.WithLabelValues(feedLabel).Inc()
 		nextState := state.NewReadyStateAfter(*item.PublishedParsed, feedState.NotifyAfter)
 		if err := f.store.SetFeedState(feedURL, nextState); err != nil {
 			logger.Error("Failed to update feed state after notification", "error", err, "title", item.Title)
@@ -144,6 +146,13 @@ func (f *Fetcher) ProcessFeed(ctx context.Context, feedURL string) {
 		}
 		logger.Info("Processed new item", "title", item.Title)
 	}
+}
+
+func feedTitle(feedConfig config.Feed, parsedTitle string) string {
+	if feedConfig.Name != "" {
+		return feedConfig.Name
+	}
+	return parsedTitle
 }
 
 func (f *Fetcher) processWarmingFeed(feedURL string, logger *slog.Logger, feedState state.FeedState, latest time.Time) {
@@ -195,7 +204,7 @@ func itemsAfter(items []*gofeed.Item, baseline, notifyAfter time.Time) []*gofeed
 	return out
 }
 
-func (f *Fetcher) Run(ctx context.Context, feeds []string, interval time.Duration) {
+func (f *Fetcher) Run(ctx context.Context, feeds []config.Feed, interval time.Duration) {
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
@@ -211,16 +220,16 @@ func (f *Fetcher) Run(ctx context.Context, feeds []string, interval time.Duratio
 	}
 }
 
-func (f *Fetcher) runOnce(ctx context.Context, feeds []string) {
+func (f *Fetcher) runOnce(ctx context.Context, feeds []config.Feed) {
 	var wg sync.WaitGroup
-	for _, feedURL := range feeds {
+	for _, feedConfig := range feeds {
 		wg.Add(1)
-		go func(url string) {
+		go func(feedConfig config.Feed) {
 			defer wg.Done()
 			ctx, cancel := context.WithTimeout(ctx, 5*time.Minute) // Increased timeout for rate limits
 			defer cancel()
-			f.ProcessFeed(ctx, url)
-		}(feedURL)
+			f.ProcessFeed(ctx, feedConfig)
+		}(feedConfig)
 	}
 	wg.Wait()
 }

@@ -30,8 +30,12 @@ docker compose up --build -d
 
 ```yaml
 feeds:
-  - https://rss.nytimes.com/services/xml/rss/nyt/Technology.xml
-  - https://www.youtube.com/feeds/videos.xml?channel_id=UCRcLAVTbmx2-iNcXSsupdNA
+  - name: nytimes-technology
+    url: https://rss.nytimes.com/services/xml/rss/nyt/Technology.xml
+  - name: youtube-channel
+    url: https://www.youtube.com/feeds/videos.xml?channel_id=UCRcLAVTbmx2-iNcXSsupdNA
+  # URLだけの既存形式も利用できます。
+  # - https://example.com/rss.xml
 
 # フィードをチェックする間隔
 interval: 10m

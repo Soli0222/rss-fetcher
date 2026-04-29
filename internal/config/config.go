@@ -9,12 +9,46 @@ import (
 )
 
 type FeedsConfig struct {
-	Feeds                           []string      `yaml:"feeds"`
+	Feeds                           []Feed        `yaml:"feeds"`
 	Interval                        time.Duration `yaml:"interval"`
 	Store                           StoreConfig   `yaml:"store"`
 	SkipInitialNotify               bool          `yaml:"skip_initial_notify"`
 	InitialWarmupStableObservations int           `yaml:"initial_warmup_stable_observations"`
 	MaxNotificationsPerFeedPerRun   int           `yaml:"max_notifications_per_feed_per_run"`
+}
+
+type Feed struct {
+	Name string `yaml:"name"`
+	URL  string `yaml:"url"`
+}
+
+func (f Feed) Label() string {
+	if f.Name != "" {
+		return f.Name
+	}
+	return f.URL
+}
+
+func (f *Feed) UnmarshalYAML(value *yaml.Node) error {
+	switch value.Kind {
+	case yaml.ScalarNode:
+		var url string
+		if err := value.Decode(&url); err != nil {
+			return err
+		}
+		f.URL = url
+		return nil
+	case yaml.MappingNode:
+		type feed Feed
+		var decoded feed
+		if err := value.Decode(&decoded); err != nil {
+			return err
+		}
+		*f = Feed(decoded)
+		return nil
+	default:
+		return fmt.Errorf("feed must be a URL string or mapping with url/name")
+	}
 }
 
 type StoreConfig struct {
@@ -67,6 +101,11 @@ func Load(feedsPath, webhooksPath string) (*AppConfig, error) {
 
 	if len(c.Feeds.Feeds) == 0 {
 		return nil, fmt.Errorf("no feeds configured")
+	}
+	for i, feed := range c.Feeds.Feeds {
+		if feed.URL == "" {
+			return nil, fmt.Errorf("feeds[%d].url is required", i)
+		}
 	}
 	if len(c.Webhooks.Webhooks) == 0 {
 		return nil, fmt.Errorf("no webhooks configured")

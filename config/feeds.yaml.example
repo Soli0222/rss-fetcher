@@ -1,6 +1,10 @@
 feeds:
   - https://www.youtube.com/feeds/videos.xml?channel_id=UCRcLAVTbmx2-iNcXSsupdNA
 interval: 10s
+# If true, on the first run for a feed (no prior state), record the latest
+# item time as the baseline without sending notifications. Subsequent runs
+# notify only items newer than the baseline.
+skip_initial_notify: false
 store:
   # If you want to on-memory storage, set type to 'memory'
   # type: 'memory'

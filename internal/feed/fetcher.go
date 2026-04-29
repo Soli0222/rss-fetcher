@@ -2,6 +2,7 @@ package feed
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"sort"
 	"sync"
@@ -29,18 +30,20 @@ var (
 )
 
 type Fetcher struct {
-	store    state.Store
-	whClient *webhook.Client
-	webhooks []config.Webhook
-	parser   *gofeed.Parser
+	store             state.Store
+	whClient          *webhook.Client
+	webhooks          []config.Webhook
+	parser            *gofeed.Parser
+	skipInitialNotify bool
 }
 
-func NewFetcher(store state.Store, whClient *webhook.Client, webhooks []config.Webhook) *Fetcher {
+func NewFetcher(store state.Store, whClient *webhook.Client, webhooks []config.Webhook, skipInitialNotify bool) *Fetcher {
 	return &Fetcher{
-		store:    store,
-		whClient: whClient,
-		webhooks: webhooks,
-		parser:   gofeed.NewParser(),
+		store:             store,
+		whClient:          whClient,
+		webhooks:          webhooks,
+		parser:            gofeed.NewParser(),
+		skipInitialNotify: skipInitialNotify,
 	}
 }
 
@@ -56,7 +59,11 @@ func (f *Fetcher) ProcessFeed(ctx context.Context, feedURL string) {
 	}
 	metricFetchCount.WithLabelValues(feedURL, "success").Inc()
 
-	lastPub := f.store.GetLastPublishedAt(feedURL)
+	lastPub, stateErr := f.store.GetLastPublishedAt(feedURL)
+	firstRun := errors.Is(stateErr, state.ErrNoState)
+	if stateErr != nil && !firstRun {
+		logger.Error("Failed to read feed state, proceeding without baseline", "error", stateErr)
+	}
 
 	var newItems []*gofeed.Item
 
@@ -84,6 +91,13 @@ func (f *Fetcher) ProcessFeed(ctx context.Context, feedURL string) {
 	sort.Slice(newItems, func(i, j int) bool {
 		return newItems[i].PublishedParsed.Before(*newItems[j].PublishedParsed)
 	})
+
+	if f.skipInitialNotify && firstRun {
+		latest := *newItems[len(newItems)-1].PublishedParsed
+		f.store.SetLastPublishedAt(feedURL, latest)
+		logger.Info("Skipping initial notification, baseline recorded", "count", len(newItems), "latest", latest)
+		return
+	}
 
 	for _, item := range newItems {
 		payload := webhook.Payload{

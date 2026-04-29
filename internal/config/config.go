@@ -9,9 +9,10 @@ import (
 )
 
 type FeedsConfig struct {
-	Feeds    []string      `yaml:"feeds"`
-	Interval time.Duration `yaml:"interval"`
-	Store    StoreConfig   `yaml:"store"`
+	Feeds             []string      `yaml:"feeds"`
+	Interval          time.Duration `yaml:"interval"`
+	Store             StoreConfig   `yaml:"store"`
+	SkipInitialNotify bool          `yaml:"skip_initial_notify"`
 }
 
 type StoreConfig struct {

@@ -29,25 +29,22 @@ func NewValkeyStore(addr, password string) (*ValkeyStore, error) {
 	return &ValkeyStore{client: rdb}, nil
 }
 
-func (s *ValkeyStore) GetLastPublishedAt(feedURL string) time.Time {
+func (s *ValkeyStore) GetLastPublishedAt(feedURL string) (time.Time, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
 	val, err := s.client.Get(ctx, "feed:"+feedURL).Result()
 	if err == redis.Nil {
-		return time.Time{}
+		return time.Time{}, ErrNoState
 	} else if err != nil {
-		// Log error? For interface simplicity we just return zero time, meaning "fetch all"
-		// Ideally we should handle error, but for V2 let's stick to interface.
-		// A potential improvement: Log via slog if we had access to logger here.
-		return time.Time{}
+		return time.Time{}, fmt.Errorf("valkey get failed: %w", err)
 	}
 
 	t, err := time.Parse(time.RFC3339, val)
 	if err != nil {
-		return time.Time{}
+		return time.Time{}, fmt.Errorf("invalid stored timestamp %q: %w", val, err)
 	}
-	return t
+	return t, nil
 }
 
 func (s *ValkeyStore) SetLastPublishedAt(feedURL string, t time.Time) {

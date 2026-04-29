@@ -36,6 +36,11 @@ feeds:
 # フィードをチェックする間隔
 interval: 10m
 
+# 初回起動時（フィードの履歴が未保存のとき）に既存アイテムを通知せず、
+# 最新アイテムの時刻をベースラインとしてストアに記録するだけにする。
+# memory ストアならメモリ上、valkey ストアなら Valkey に保存されます。
+skip_initial_notify: false
+
 store:
   # 永続化にValkey (Redis) を使用する場合
   type: 'valkey'

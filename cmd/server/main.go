@@ -50,7 +50,7 @@ func main() {
 
 	// Init Components
 	whClient := webhook.NewClient()
-	fetcher := feed.NewFetcher(store, whClient, cfg.Webhooks.Webhooks, cfg.Feeds.SkipInitialNotify)
+	fetcher := feed.NewFetcher(store, whClient, cfg.Webhooks.Webhooks, cfg.Feeds)
 
 	// Metrics Server
 	go func() {

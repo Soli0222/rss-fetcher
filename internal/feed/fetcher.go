@@ -30,20 +30,24 @@ var (
 )
 
 type Fetcher struct {
-	store             state.Store
-	whClient          *webhook.Client
-	webhooks          []config.Webhook
-	parser            *gofeed.Parser
-	skipInitialNotify bool
+	store                           state.Store
+	whClient                        *webhook.Client
+	webhooks                        []config.Webhook
+	parser                          *gofeed.Parser
+	skipInitialNotify               bool
+	initialWarmupStableObservations int
+	maxNotificationsPerFeedPerRun   int
 }
 
-func NewFetcher(store state.Store, whClient *webhook.Client, webhooks []config.Webhook, skipInitialNotify bool) *Fetcher {
+func NewFetcher(store state.Store, whClient *webhook.Client, webhooks []config.Webhook, feedsConfig *config.FeedsConfig) *Fetcher {
 	return &Fetcher{
-		store:             store,
-		whClient:          whClient,
-		webhooks:          webhooks,
-		parser:            gofeed.NewParser(),
-		skipInitialNotify: skipInitialNotify,
+		store:                           store,
+		whClient:                        whClient,
+		webhooks:                        webhooks,
+		parser:                          gofeed.NewParser(),
+		skipInitialNotify:               feedsConfig.SkipInitialNotify,
+		initialWarmupStableObservations: feedsConfig.InitialWarmupStableObservations,
+		maxNotificationsPerFeedPerRun:   feedsConfig.MaxNotificationsPerFeedPerRun,
 	}
 }
 
@@ -59,45 +63,64 @@ func (f *Fetcher) ProcessFeed(ctx context.Context, feedURL string) {
 	}
 	metricFetchCount.WithLabelValues(feedURL, "success").Inc()
 
-	lastPub, stateErr := f.store.GetLastPublishedAt(feedURL)
-	firstRun := errors.Is(stateErr, state.ErrNoState)
-	if stateErr != nil && !firstRun {
-		logger.Error("Failed to read feed state, proceeding without baseline", "error", stateErr)
+	feedState, stateErr := f.store.GetFeedState(feedURL)
+	if stateErr != nil && !errors.Is(stateErr, state.ErrNoState) {
+		logger.Error("Failed to read feed state; skipping notification because baseline is not comparable", "error", stateErr)
+		return
 	}
 
-	var newItems []*gofeed.Item
+	items := itemsWithPublishedTime(feed.Items)
+	if len(items) == 0 {
+		logger.Debug("No comparable items")
+		return
+	}
 
-	for _, item := range feed.Items {
-		if item.PublishedParsed == nil {
-			if item.UpdatedParsed != nil {
-				item.PublishedParsed = item.UpdatedParsed
+	sort.Slice(items, func(i, j int) bool {
+		return items[i].PublishedParsed.Before(*items[j].PublishedParsed)
+	})
+	latest := *items[len(items)-1].PublishedParsed
+
+	if errors.Is(stateErr, state.ErrNoState) {
+		if !f.skipInitialNotify {
+			feedState = state.NewReadyState(time.Time{})
+		} else {
+			feedState = state.NewWarmingState(latest, time.Now())
+			if err := f.store.SetFeedState(feedURL, feedState); err != nil {
+				logger.Error("Failed to record initial warming state", "error", err)
 			} else {
-				continue
+				logger.Info("Starting feed warmup; notification skipped", "latest", latest, "stable_observations", feedState.WarmupStableObservations)
 			}
-		}
-
-		if item.PublishedParsed.After(lastPub) {
-			newItems = append(newItems, item)
+			return
 		}
 	}
 
+	if feedState.Status == state.StatusWarming {
+		f.processWarmingFeed(feedURL, logger, feedState, latest)
+		return
+	}
+
+	if feedState.Status != state.StatusReady {
+		logger.Error("Unknown feed state status; skipping notification because baseline is not comparable", "status", feedState.Status)
+		return
+	}
+
+	newItems := itemsAfter(items, feedState.LastPublishedAt, feedState.NotifyAfter)
 	if len(newItems) == 0 {
 		logger.Debug("No new items")
 		return
 	}
 
-	logger.Info("Found new items", "count", len(newItems))
-
-	sort.Slice(newItems, func(i, j int) bool {
-		return newItems[i].PublishedParsed.Before(*newItems[j].PublishedParsed)
-	})
-
-	if f.skipInitialNotify && firstRun {
-		latest := *newItems[len(newItems)-1].PublishedParsed
-		f.store.SetLastPublishedAt(feedURL, latest)
-		logger.Info("Skipping initial notification, baseline recorded", "count", len(newItems), "latest", latest)
+	if f.maxNotificationsPerFeedPerRun > 0 && len(newItems) > f.maxNotificationsPerFeedPerRun {
+		nextState := state.NewReadyStateAfter(*newItems[len(newItems)-1].PublishedParsed, feedState.NotifyAfter)
+		if err := f.store.SetFeedState(feedURL, nextState); err != nil {
+			logger.Error("Failed to advance state after suppressing notification burst", "error", err, "count", len(newItems))
+			return
+		}
+		logger.Warn("Suppressed notification burst and advanced baseline", "count", len(newItems), "limit", f.maxNotificationsPerFeedPerRun, "latest", nextState.LastPublishedAt)
 		return
 	}
+
+	logger.Info("Found new items", "count", len(newItems))
 
 	for _, item := range newItems {
 		payload := webhook.Payload{
@@ -107,45 +130,69 @@ func (f *Fetcher) ProcessFeed(ctx context.Context, feedURL string) {
 			PublishedAt: *item.PublishedParsed,
 		}
 
-		// Broadcast to all configured webhooks
-		success := true
 		for _, wh := range f.webhooks {
 			if err := f.whClient.SendWithRateLimit(ctx, wh, payload); err != nil {
 				logger.Error("Failed to post webhook", "name", wh.Name, "item", item.Title, "error", err)
-				success = false
-				// If one webhook fails, do we stop? or try others?
-				// For now: Log and continue to others.
-				// But: should we mark item as processed?
-				// If we have critical webhook failure, we might want to NOT update state.
-				// Let's go with: if ALL fail, failure. If at least one succeeds, maybe success?
-				// User didn't specify. Conservative: if ANY fails, treat as partial failure?
-				// Simplest: Just try best effort.
 			}
 		}
 
-		// Determine if we should update state
-		if !success {
-			// If we failed to notify some webhooks, maybe we shouldn't advance state?
-			// But that would mean duplicate for successful ones next time.
-			// Ideally we track state per webhook? Too complex for now.
-			// Let's assume if at least one attempt was made, update state.
-			// OR: Simplistic approach as before -> break on error.
-			// Revert to: logic from before. If any error, break loop and don't update state.
-			// But now we have multiple webhooks.
-
-			// Let's decide: If sending to ANY webhook fails, log it but still mark as read?
-			// No, that risks data loss (user misses notification).
-			// If we don't mark as read, we repost to ALL next time (duplicate).
-			// Dilemma.
-			// Given "monitoring RSS" usually implies duplicates is better than missing.
-			// But for multiple webhooks, duplicates on A because B failed is annoying.
-			// Let's Log Error and Proceed. Updating state.
-		}
-
 		metricNewItems.WithLabelValues(feedURL).Inc()
-		f.store.SetLastPublishedAt(feedURL, *item.PublishedParsed)
+		nextState := state.NewReadyStateAfter(*item.PublishedParsed, feedState.NotifyAfter)
+		if err := f.store.SetFeedState(feedURL, nextState); err != nil {
+			logger.Error("Failed to update feed state after notification", "error", err, "title", item.Title)
+			return
+		}
 		logger.Info("Processed new item", "title", item.Title)
 	}
+}
+
+func (f *Fetcher) processWarmingFeed(feedURL string, logger *slog.Logger, feedState state.FeedState, latest time.Time) {
+	if latest.After(feedState.LastPublishedAt) {
+		feedState.LastPublishedAt = latest
+		feedState.WarmupStableObservations = 1
+	} else {
+		feedState.WarmupStableObservations++
+	}
+
+	if feedState.WarmupStableObservations >= f.initialWarmupStableObservations {
+		feedState = state.NewReadyStateAfter(feedState.LastPublishedAt, feedState.NotifyAfter)
+		if err := f.store.SetFeedState(feedURL, feedState); err != nil {
+			logger.Error("Failed to mark feed warmup complete", "error", err)
+			return
+		}
+		logger.Info("Feed warmup complete; baseline ready", "latest", feedState.LastPublishedAt)
+		return
+	}
+
+	if err := f.store.SetFeedState(feedURL, feedState); err != nil {
+		logger.Error("Failed to update feed warmup state", "error", err)
+		return
+	}
+	logger.Info("Feed warmup continuing; notification skipped", "latest", feedState.LastPublishedAt, "stable_observations", feedState.WarmupStableObservations, "required", f.initialWarmupStableObservations)
+}
+
+func itemsWithPublishedTime(items []*gofeed.Item) []*gofeed.Item {
+	out := make([]*gofeed.Item, 0, len(items))
+	for _, item := range items {
+		if item.PublishedParsed == nil {
+			if item.UpdatedParsed == nil {
+				continue
+			}
+			item.PublishedParsed = item.UpdatedParsed
+		}
+		out = append(out, item)
+	}
+	return out
+}
+
+func itemsAfter(items []*gofeed.Item, baseline, notifyAfter time.Time) []*gofeed.Item {
+	out := make([]*gofeed.Item, 0, len(items))
+	for _, item := range items {
+		if item.PublishedParsed.After(baseline) && (notifyAfter.IsZero() || item.PublishedParsed.After(notifyAfter)) {
+			out = append(out, item)
+		}
+	}
+	return out
 }
 
 func (f *Fetcher) Run(ctx context.Context, feeds []string, interval time.Duration) {

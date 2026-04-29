@@ -1,5 +1,8 @@
 feeds:
-  - https://www.youtube.com/feeds/videos.xml?channel_id=UCRcLAVTbmx2-iNcXSsupdNA
+  - name: example-channel
+    url: https://www.youtube.com/feeds/videos.xml?channel_id=UCRcLAVTbmx2-iNcXSsupdNA
+  # URL-only entries are also supported:
+  # - https://example.com/rss.xml
 interval: 10s
 # If true, do not notify while a feed has no comparable state yet.
 # The fetcher records a baseline first, waits until the observed latest item

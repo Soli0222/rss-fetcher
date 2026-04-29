@@ -9,10 +9,12 @@ import (
 )
 
 type FeedsConfig struct {
-	Feeds             []string      `yaml:"feeds"`
-	Interval          time.Duration `yaml:"interval"`
-	Store             StoreConfig   `yaml:"store"`
-	SkipInitialNotify bool          `yaml:"skip_initial_notify"`
+	Feeds                           []string      `yaml:"feeds"`
+	Interval                        time.Duration `yaml:"interval"`
+	Store                           StoreConfig   `yaml:"store"`
+	SkipInitialNotify               bool          `yaml:"skip_initial_notify"`
+	InitialWarmupStableObservations int           `yaml:"initial_warmup_stable_observations"`
+	MaxNotificationsPerFeedPerRun   int           `yaml:"max_notifications_per_feed_per_run"`
 }
 
 type StoreConfig struct {
@@ -42,7 +44,10 @@ func Load(feedsPath, webhooksPath string) (*AppConfig, error) {
 	// Defaults
 	c := &AppConfig{
 		Feeds: &FeedsConfig{
-			Interval: 10 * time.Minute,
+			Interval:                        10 * time.Minute,
+			SkipInitialNotify:               true,
+			InitialWarmupStableObservations: 2,
+			MaxNotificationsPerFeedPerRun:   10,
 			Store: StoreConfig{
 				Type: "memory",
 			},
@@ -65,6 +70,12 @@ func Load(feedsPath, webhooksPath string) (*AppConfig, error) {
 	}
 	if len(c.Webhooks.Webhooks) == 0 {
 		return nil, fmt.Errorf("no webhooks configured")
+	}
+	if c.Feeds.InitialWarmupStableObservations < 1 {
+		return nil, fmt.Errorf("initial_warmup_stable_observations must be >= 1")
+	}
+	if c.Feeds.MaxNotificationsPerFeedPerRun < 0 {
+		return nil, fmt.Errorf("max_notifications_per_feed_per_run must be >= 0")
 	}
 
 	// Set default provider

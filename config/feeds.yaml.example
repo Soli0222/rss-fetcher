@@ -1,10 +1,18 @@
 feeds:
   - https://www.youtube.com/feeds/videos.xml?channel_id=UCRcLAVTbmx2-iNcXSsupdNA
 interval: 10s
-# If true, on the first run for a feed (no prior state), record the latest
-# item time as the baseline without sending notifications. Subsequent runs
-# notify only items newer than the baseline.
-skip_initial_notify: false
+# If true, do not notify while a feed has no comparable state yet.
+# The fetcher records a baseline first, waits until the observed latest item
+# is stable, and only then starts notifying future items.
+skip_initial_notify: true
+
+# Number of consecutive observations with the same latest item time required
+# before a warming feed becomes ready.
+initial_warmup_stable_observations: 2
+
+# Suppress and advance the baseline if one feed would notify more than this
+# many items in a single run. Set 0 to disable this guard.
+max_notifications_per_feed_per_run: 10
 store:
   # If you want to on-memory storage, set type to 'memory'
   # type: 'memory'

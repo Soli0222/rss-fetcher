@@ -36,10 +36,16 @@ feeds:
 # フィードをチェックする間隔
 interval: 10m
 
-# 初回起動時（フィードの履歴が未保存のとき）に既存アイテムを通知せず、
-# 最新アイテムの時刻をベースラインとしてストアに記録するだけにする。
-# memory ストアならメモリ上、valkey ストアなら Valkey に保存されます。
-skip_initial_notify: false
+# 比較可能な状態が保存されていないフィードでは通知せず、まず baseline を作る。
+# RSS が初回から全 item を返さない場合に、後から見えた既存 item を一括通知しないための設定です。
+skip_initial_notify: true
+
+# warming 中に「最新 item の時刻が変わらない」状態を何回連続で観測したら ready にするか。
+initial_warmup_stable_observations: 2
+
+# 1回の取得でこの件数を超える通知が出そうな場合は、通知せず baseline だけ進める。
+# 0 にするとこの guard を無効化します。
+max_notifications_per_feed_per_run: 10
 
 store:
   # 永続化にValkey (Redis) を使用する場合

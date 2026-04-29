@@ -29,28 +29,34 @@ func NewValkeyStore(addr, password string) (*ValkeyStore, error) {
 	return &ValkeyStore{client: rdb}, nil
 }
 
-func (s *ValkeyStore) GetLastPublishedAt(feedURL string) (time.Time, error) {
+func (s *ValkeyStore) GetFeedState(feedURL string) (FeedState, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
 	val, err := s.client.Get(ctx, "feed:"+feedURL).Result()
 	if err == redis.Nil {
-		return time.Time{}, ErrNoState
+		return FeedState{}, ErrNoState
 	} else if err != nil {
-		return time.Time{}, fmt.Errorf("valkey get failed: %w", err)
+		return FeedState{}, fmt.Errorf("valkey get failed: %w", err)
 	}
 
-	t, err := time.Parse(time.RFC3339, val)
+	st, err := DecodeFeedState(val)
 	if err != nil {
-		return time.Time{}, fmt.Errorf("invalid stored timestamp %q: %w", val, err)
+		return FeedState{}, fmt.Errorf("invalid stored feed state %q: %w", val, err)
 	}
-	return t, nil
+	return st, nil
 }
 
-func (s *ValkeyStore) SetLastPublishedAt(feedURL string, t time.Time) {
+func (s *ValkeyStore) SetFeedState(feedURL string, st FeedState) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
-	// Store as RFC3339 string
-	s.client.Set(ctx, "feed:"+feedURL, t.Format(time.RFC3339), 0)
+	encoded, err := EncodeFeedState(st)
+	if err != nil {
+		return fmt.Errorf("encode feed state failed: %w", err)
+	}
+	if err := s.client.Set(ctx, "feed:"+feedURL, encoded, 0).Err(); err != nil {
+		return fmt.Errorf("valkey set failed: %w", err)
+	}
+	return nil
 }

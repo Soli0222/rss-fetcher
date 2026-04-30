@@ -126,7 +126,7 @@ func (f *Fetcher) ProcessFeed(ctx context.Context, feedConfig config.Feed) {
 
 	for _, item := range newItems {
 		payload := webhook.Payload{
-			FeedTitle:   feedTitle(feedConfig, feed.Title),
+			FeedTitle:   feed.Title,
 			ItemTitle:   item.Title,
 			ItemURL:     item.Link,
 			PublishedAt: *item.PublishedParsed,
@@ -146,13 +146,6 @@ func (f *Fetcher) ProcessFeed(ctx context.Context, feedConfig config.Feed) {
 		}
 		logger.Info("Processed new item", "title", item.Title)
 	}
-}
-
-func feedTitle(feedConfig config.Feed, parsedTitle string) string {
-	if feedConfig.Name != "" {
-		return feedConfig.Name
-	}
-	return parsedTitle
 }
 
 func (f *Fetcher) processWarmingFeed(feedURL string, logger *slog.Logger, feedState state.FeedState, latest time.Time) {

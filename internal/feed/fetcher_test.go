@@ -122,7 +122,7 @@ func TestBurstSuppressionAdvancesBaselineWithoutNotifications(t *testing.T) {
 	}
 }
 
-func TestConfiguredFeedNameIsUsedInWebhookPayload(t *testing.T) {
+func TestWebhookPayloadUsesRSSFeedTitleWhenConfiguredNameExists(t *testing.T) {
 	baseline := time.Now().Add(-1 * time.Hour).UTC().Truncate(time.Second)
 	newItem := baseline.Add(1 * time.Minute)
 
@@ -161,7 +161,7 @@ func TestConfiguredFeedNameIsUsedInWebhookPayload(t *testing.T) {
 
 	select {
 	case got := <-payloads:
-		want := "**Release Notes**\nnew\nhttps://example.com/0"
+		want := "**test feed**\nnew\nhttps://example.com/0"
 		if got.Content != want {
 			t.Fatalf("webhook content = %q, want %q", got.Content, want)
 		}

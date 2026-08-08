@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.1](https://github.com/Soli0222/rss-fetcher/compare/v1.4.0...v1.4.1) (2026-08-08)
+
+
+### バグ修正・依存関係の更新
+
+* require webhooks[].url in config validation ([#69](https://github.com/Soli0222/rss-fetcher/issues/69)) ([c970f8d](https://github.com/Soli0222/rss-fetcher/commit/c970f8d5ee885f2c49f648aa2093f6e97d617ded))
+
 ## [1.4.0](https://github.com/Soli0222/rss-fetcher/compare/v1.3.2...v1.4.0) (2026-08-08)
 
 

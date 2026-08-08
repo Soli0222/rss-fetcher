@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.0](https://github.com/Soli0222/rss-fetcher/compare/v1.3.2...v1.4.0) (2026-08-08)
+
+
+### 新機能
+
+* publish helm chart as OCI artifact from this repo ([#66](https://github.com/Soli0222/rss-fetcher/issues/66)) ([feb3ff9](https://github.com/Soli0222/rss-fetcher/commit/feb3ff923781ddeaf6586921c37cc40c22e5d657))
+
 ## [1.3.2](https://github.com/Soli0222/rss-fetcher/compare/v1.3.1...v1.3.2) (2026-07-26)
 
 

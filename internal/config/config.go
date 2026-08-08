@@ -110,6 +110,11 @@ func Load(feedsPath, webhooksPath string) (*AppConfig, error) {
 	if len(c.Webhooks.Webhooks) == 0 {
 		return nil, fmt.Errorf("no webhooks configured")
 	}
+	for i, wh := range c.Webhooks.Webhooks {
+		if wh.URL == "" {
+			return nil, fmt.Errorf("webhooks[%d].url is required", i)
+		}
+	}
 	if c.Feeds.InitialWarmupStableObservations < 1 {
 		return nil, fmt.Errorf("initial_warmup_stable_observations must be >= 1")
 	}

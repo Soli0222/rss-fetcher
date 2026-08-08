@@ -1,0 +1,100 @@
+# Default values for rss-fetcher.
+
+nameOverride: ""
+fullnameOverride: ""
+
+image:
+  repository: ghcr.io/soli0222/rss-fetcher
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: ""
+
+imagePullSecrets: []
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+podSecurityContext: {}
+securityContext: {}
+
+service:
+  type: ClusterIP
+  port: 80 # Not used really since app is a worker, but maybe for metrics?
+
+resources: {}
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+# Application specific configuration
+config:
+  # Interval for checking RSS feeds
+  interval: "10m"
+
+  # If true, do not notify while a feed has no comparable state yet.
+  # The fetcher records a baseline first, waits until the observed latest item
+  # is stable, and only then starts notifying future items.
+  skip_initial_notify: true
+
+  # Number of consecutive observations with the same latest item time required
+  # before a warming feed becomes ready.
+  initial_warmup_stable_observations: 2
+
+  # Suppress and advance the baseline if one feed would notify more than this
+  # many items in a single run. Set 0 to disable this guard.
+  max_notifications_per_feed_per_run: 10
+
+  # feeds.yaml content
+  feeds:
+    - name: nytimes-technology
+      url: https://rss.nytimes.com/services/xml/rss/nyt/Technology.xml
+    - name: youtube-channel
+      url: https://www.youtube.com/feeds/videos.xml?channel_id=UCRcLAVTbmx2-iNcXSsupdNA
+
+  # Webhooks configuration
+  # If existingSecret is set, it will be used and 'webhooks' content will be ignored.
+  # The existing secret must have a key 'webhooks.yaml'.
+  existingSecret: ""
+  
+  # webhooks.yaml content (used if existingSecret is empty)
+  webhooks:
+    - name: "my-webhook"
+      url: "https://your-webhook-url.com/entrypoint"
+      post_interval: 2s
+      provider: generic
+    - name: "discord-example"
+      url: "https://discord.com/api/webhooks/..."
+      post_interval: 2s
+      provider: discord
+
+# Metrics configuration
+metrics:
+  enabled: true
+  port: 9090
+  serviceMonitor:
+    enabled: true
+    interval: 30s
+    scrapeTimeout: 10s
+    labels: {}
+
+# Valkey configuration
+valkey:
+  enabled: true
+  image:
+    repository: valkey/valkey
+    tag: "9.1.0-alpine3.23"
+    pullPolicy: IfNotPresent
+  service:
+    port: 6379
+  persistence:
+    enabled: false
+    size: 1Gi
+    storageClass: ""
+    accessMode: ReadWriteOnce
+
+externalValkey:
+  host: ""
+  port: 6379

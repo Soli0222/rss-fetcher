@@ -1,0 +1,16 @@
+RSS Fetcher is running.
+
+{{- if .Values.metrics.enabled }}
+Metrics are available at:
+  http://{{ include "rss-fetcher.fullname" . }}:{{ .Values.service.port }}/metrics
+{{- end }}
+
+{{- if .Values.valkey.enabled }}
+Valkey is enabled and running at:
+  {{ include "rss-fetcher.valkey.serviceName" . }}:{{ .Values.valkey.service.port }}
+{{- else if .Values.externalValkey.host }}
+Using external Valkey at:
+  {{ .Values.externalValkey.host }}:{{ .Values.externalValkey.port }}
+{{- else }}
+Running in In-Memory mode (no persistence).
+{{- end }}

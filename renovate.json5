@@ -25,6 +25,9 @@
       'security',
     ],
   },
+  'helm-values': {
+    enabled: false,
+  },
   customManagers: [
     {
       customType: 'regex',
@@ -36,6 +39,17 @@
       ],
       depNameTemplate: 'golang',
       datasourceTemplate: 'golang-version',
+    },
+    {
+      customType: 'regex',
+      managerFilePatterns: [
+        '/^charts/.+/values\\.yaml$/',
+      ],
+      matchStrings: [
+        'repository:\\s*(?<depName>[^\\s]+)\\s+tag:\\s*["\'](?<currentValue>[^"\']+)["\']',
+      ],
+      datasourceTemplate: 'docker',
+      versioningTemplate: 'docker',
     },
   ],
   packageRules: [
@@ -73,6 +87,35 @@
       commitMessageTopic: 'Docker {{depName}}',
       semanticCommitType: 'fix',
       automerge: true,
+    },
+    {
+      matchManagers: [
+        'custom.regex',
+      ],
+      matchFileNames: [
+        'charts/**/values.yaml',
+      ],
+      commitMessageTopic: 'Chart image {{depName}}',
+      semanticCommitType: 'fix',
+      semanticCommitScope: 'chart',
+      addLabels: [
+        'chart',
+      ],
+    },
+    {
+      matchManagers: [
+        'custom.regex',
+      ],
+      matchFileNames: [
+        'charts/**/values.yaml',
+      ],
+      matchUpdateTypes: [
+        'major',
+      ],
+      automerge: false,
+      addLabels: [
+        'major-update',
+      ],
     },
   ],
 }

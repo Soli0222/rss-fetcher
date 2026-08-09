@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.0](https://github.com/Soli0222/rss-fetcher/compare/v1.4.1...v1.5.0) (2026-08-09)
+
+
+### 新機能
+
+* **ci:** rebuild the release pipeline as a DAG on shared workflows ([#71](https://github.com/Soli0222/rss-fetcher/issues/71)) ([5def745](https://github.com/Soli0222/rss-fetcher/commit/5def7450938d23f42fec7f361fcd58c1408f92a0))
+
 ## [1.4.1](https://github.com/Soli0222/rss-fetcher/compare/v1.4.0...v1.4.1) (2026-08-08)
 
 

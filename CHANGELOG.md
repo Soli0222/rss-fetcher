@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.5.1](https://github.com/Soli0222/rss-fetcher/compare/v1.5.0...v1.5.1) (2026-10-16)
+
+
+### バグ修正・依存関係の更新
+
+* **ci:** test dependency PRs and report Renovate errors ([#83](https://github.com/Soli0222/rss-fetcher/issues/83)) ([0cb1ec8](https://github.com/Soli0222/rss-fetcher/commit/0cb1ec86bcf36e3777eb9636308f06ece7ec1e0b))
+* **deps:** update docker alpine to v3.24.2 ([#79](https://github.com/Soli0222/rss-fetcher/issues/79)) ([09c6e75](https://github.com/Soli0222/rss-fetcher/commit/09c6e75c8f676c1ee19d07e33e4ec8b4c7e6ed92))
+* **deps:** update go github.com/mmcdole/gofeed to v1.5.0 ([#76](https://github.com/Soli0222/rss-fetcher/issues/76)) ([f3e8538](https://github.com/Soli0222/rss-fetcher/commit/f3e8538a04486d4bf8eaddc3aac731ae8be34061))
+* **deps:** update go github.com/prometheus/client_golang to v1.25.0 ([#81](https://github.com/Soli0222/rss-fetcher/issues/81)) ([49b7554](https://github.com/Soli0222/rss-fetcher/commit/49b7554ab73434f0ea1ddb0c771f51cdf5bfce5c))
+* **deps:** update go github.com/redis/go-redis/v9 to v9.23.0 ([#80](https://github.com/Soli0222/rss-fetcher/issues/80)) ([8a2978e](https://github.com/Soli0222/rss-fetcher/commit/8a2978e65abdff398b9da54c582473ebc1de1e50))
+
 ## [1.5.0](https://github.com/Soli0222/rss-fetcher/compare/v1.4.1...v1.5.0) (2026-08-09)
 
 

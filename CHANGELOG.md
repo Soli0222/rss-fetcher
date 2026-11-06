@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.3](https://github.com/Soli0222/rss-fetcher/compare/v1.5.2...v1.5.3) (2026-11-06)
+
+
+### バグ修正・依存関係の更新
+
+* **deps:** update docker alpine to v3.24.4 ([#94](https://github.com/Soli0222/rss-fetcher/issues/94)) ([273a7be](https://github.com/Soli0222/rss-fetcher/commit/273a7be71b4b72ca25b941751d81187b85dc740c))
+
 ## [1.5.2](https://github.com/Soli0222/rss-fetcher/compare/v1.5.1...v1.5.2) (2026-10-22)
 
 

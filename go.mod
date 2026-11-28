@@ -5,7 +5,7 @@ go 1.27.4
 require (
 	github.com/mmcdole/gofeed v1.5.0
 	github.com/prometheus/client_golang v1.25.0
-	github.com/redis/go-redis/v9 v9.24.0
+	github.com/redis/go-redis/v9 v9.24.1
 	gopkg.in/yaml.v3 v3.0.1
 )
 

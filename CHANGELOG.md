@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.5.4](https://github.com/Soli0222/rss-fetcher/compare/v1.5.3...v1.5.4) (2026-11-28)
+
+
+### バグ修正・依存関係の更新
+
+* **deps:** update go github.com/redis/go-redis/v9 to v9.24.0 ([#109](https://github.com/Soli0222/rss-fetcher/issues/109)) ([4b6a3a2](https://github.com/Soli0222/rss-fetcher/commit/4b6a3a2a7c4a7541dace64d37e89e2221d7be6e9))
+* **deps:** update go github.com/redis/go-redis/v9 to v9.24.1 ([#112](https://github.com/Soli0222/rss-fetcher/issues/112)) ([9b75664](https://github.com/Soli0222/rss-fetcher/commit/9b75664e8b7bd0625fea8e9c95e29d95304b209e))
+
 ## [1.5.3](https://github.com/Soli0222/rss-fetcher/compare/v1.5.2...v1.5.3) (2026-11-06)
 
 
